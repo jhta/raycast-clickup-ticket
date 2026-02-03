@@ -1,0 +1,62 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "clickup-ticket",
+  "title": "ClickUp Ticket",
+  "description": "Quickly create ClickUp tickets from Raycast",
+  "icon": "checkmark-circle-16",
+  "author": "jeisonhiguita",
+  "categories": ["Productivity"],
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "create-ticket",
+      "title": "Create ClickUp Ticket",
+      "description": "Create a new ticket in ClickUp",
+      "mode": "no-view",
+      "arguments": [
+        {
+          "name": "title",
+          "placeholder": "Ticket title",
+          "type": "text",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "preferences": [
+    {
+      "name": "apiToken",
+      "title": "ClickUp API Token",
+      "description": "Your ClickUp API token",
+      "type": "password",
+      "required": true
+    },
+    {
+      "name": "listId",
+      "title": "List ID",
+      "description": "The ClickUp list ID where tickets will be created",
+      "type": "textfield",
+      "required": true,
+      "default": "901202446417"
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.83.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+    "@types/node": "22.5.4",
+    "@types/react": "18.3.5",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4"
+  },
+  "scripts": {
+    "build": "ray build --skip-types -e dist -o dist",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "publish": "npx @raycast/api@latest publish"
+  }
+}
