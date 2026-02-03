@@ -1,4 +1,4 @@
-import { showHUD, getPreferenceValues, LaunchProps, showToast, Toast, open } from "@raycast/api";
+import { showHUD, getPreferenceValues, LaunchProps, showToast, Toast, Clipboard } from "@raycast/api";
 
 interface Preferences {
   apiToken: string;
@@ -11,13 +11,22 @@ interface Arguments {
 
 interface ClickUpTask {
   id: string;
+  custom_id: string | null;
   url: string;
   name: string;
+  text_content: string | null;
+  custom_item_id: number | null;
 }
 
 interface ClickUpError {
   err: string;
   ECODE: string;
+}
+
+function extractTicketIdFromUrl(url: string): string | null {
+  // ClickUp URL format: https://app.clickup.com/t/86xxx or https://app.clickup.com/t/PREFIX-123
+  const match = url.match(/\/t\/([A-Za-z0-9-]+)$/);
+  return match ? match[1] : null;
 }
 
 export default async function Command(props: LaunchProps<{ arguments: Arguments }>) {
@@ -53,10 +62,23 @@ export default async function Command(props: LaunchProps<{ arguments: Arguments 
 
     const task = (await response.json()) as ClickUpTask;
 
-    await showHUD(`✅ Created: ${task.name}`);
+    // Try to get the ticket ID from different sources
+    // Priority: custom_id > URL extraction > internal id
+    let ticketId: string;
 
-    // Optionally open the task in browser
-    // await open(task.url);
+    if (task.custom_id) {
+      // User-defined custom ID (e.g., CORE-123)
+      ticketId = task.custom_id;
+    } else {
+      // Extract from URL (e.g., /t/86xxx becomes 86xxx)
+      const urlId = extractTicketIdFromUrl(task.url);
+      ticketId = urlId || task.id;
+    }
+
+    // Copy ticket ID to clipboard
+    await Clipboard.copy(ticketId);
+
+    await showHUD(`✅ ${ticketId} - copied to clipboard`);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     await showHUD(`❌ Failed: ${message}`);
