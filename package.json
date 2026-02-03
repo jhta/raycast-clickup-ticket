@@ -3,7 +3,7 @@
   "name": "clickup-ticket",
   "title": "ClickUp Ticket",
   "description": "Quickly create ClickUp tickets from Raycast",
-  "icon": "checkmark-circle-16",
+  "icon": "icon.png",
   "author": "jeisonhiguita",
   "categories": ["Productivity"],
   "license": "MIT",
