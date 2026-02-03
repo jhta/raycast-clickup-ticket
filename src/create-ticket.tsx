@@ -14,8 +14,29 @@ interface ClickUpTask {
   custom_id: string | null;
   url: string;
   name: string;
-  text_content: string | null;
   custom_item_id: number | null;
+  space: {
+    id: string;
+  };
+}
+
+interface ClickUpList {
+  id: string;
+  name: string;
+  space: {
+    id: string;
+    name: string;
+  };
+}
+
+interface ClickUpSpace {
+  id: string;
+  name: string;
+  features: {
+    custom_items?: {
+      enabled: boolean;
+    };
+  };
 }
 
 interface ClickUpError {
@@ -23,10 +44,34 @@ interface ClickUpError {
   ECODE: string;
 }
 
-function extractTicketIdFromUrl(url: string): string | null {
-  // ClickUp URL format: https://app.clickup.com/t/86xxx or https://app.clickup.com/t/PREFIX-123
-  const match = url.match(/\/t\/([A-Za-z0-9-]+)$/);
-  return match ? match[1] : null;
+async function getListDetails(listId: string, apiToken: string): Promise<ClickUpList | null> {
+  try {
+    const response = await fetch(`https://api.clickup.com/api/v2/list/${listId}`, {
+      method: "GET",
+      headers: { Authorization: apiToken },
+    });
+    if (response.ok) {
+      return (await response.json()) as ClickUpList;
+    }
+  } catch {
+    // Ignore
+  }
+  return null;
+}
+
+async function getTaskDetails(taskId: string, apiToken: string): Promise<{ custom_item_id?: number } | null> {
+  try {
+    const response = await fetch(`https://api.clickup.com/api/v2/task/${taskId}?include_subtasks=false`, {
+      method: "GET",
+      headers: { Authorization: apiToken },
+    });
+    if (response.ok) {
+      return (await response.json()) as { custom_item_id?: number };
+    }
+  } catch {
+    // Ignore
+  }
+  return null;
 }
 
 export default async function Command(props: LaunchProps<{ arguments: Arguments }>) {
@@ -44,6 +89,7 @@ export default async function Command(props: LaunchProps<{ arguments: Arguments 
       title: "Creating ticket...",
     });
 
+    // Create the task
     const response = await fetch(`https://api.clickup.com/api/v2/list/${listId}/task`, {
       method: "POST",
       headers: {
@@ -62,17 +108,23 @@ export default async function Command(props: LaunchProps<{ arguments: Arguments 
 
     const task = (await response.json()) as ClickUpTask;
 
-    // Try to get the ticket ID from different sources
-    // Priority: custom_id > URL extraction > internal id
-    let ticketId: string;
+    // Get the formatted ticket ID (e.g., CORE-1234)
+    let ticketId: string = task.id;
 
-    if (task.custom_id) {
-      // User-defined custom ID (e.g., CORE-123)
-      ticketId = task.custom_id;
-    } else {
-      // Extract from URL (e.g., /t/86xxx becomes 86xxx)
-      const urlId = extractTicketIdFromUrl(task.url);
-      ticketId = urlId || task.id;
+    // Fetch task details to get custom_item_id (the number part)
+    const taskDetails = await getTaskDetails(task.id, apiToken);
+    const customItemId = taskDetails?.custom_item_id || task.custom_item_id;
+
+    if (customItemId) {
+      // Get list details to find the space name (used as prefix)
+      const listDetails = await getListDetails(listId, apiToken);
+      
+      if (listDetails?.space?.name) {
+        // Format: SPACENAME-NUMBER (e.g., CORE-1234)
+        ticketId = `${listDetails.space.name}-${customItemId}`;
+      } else {
+        ticketId = `#${customItemId}`;
+      }
     }
 
     // Copy ticket ID to clipboard
